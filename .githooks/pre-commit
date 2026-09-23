@@ -1,0 +1,13 @@
+#!/bin/sh
+echo '====================================================='
+echo 'Running pre-commit checks (Spotless, Checkstyle)...'
+echo '====================================================='
+if ! mvn spotless:check checkstyle:check; then
+    echo '====================================================='
+    echo '❌ PRE-COMMIT FAILED: Code quality checks did not pass.'
+    echo 'Please fix the errors above or run "mvn spotless:apply" to format.'
+    echo '====================================================='
+    exit 1
+fi
+echo '✅ All checks passed! Proceeding with commit.'
+exit 0

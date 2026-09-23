@@ -1,0 +1,82 @@
+name: Manual Deployment
+
+on:
+  workflow_dispatch: # Allows manual triggering from GitHub UI
+
+jobs:
+  # Job 1: Tooling System & Testing
+  validate-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      - name: Validate & Test (Format, Lint, Test)
+        run: mvn spotless:check checkstyle:check test
+
+  # Job 2: Build the Deployment Artifact
+  build-artifact:
+    needs: validate-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      - name: Build Fat JAR
+        run: mvn clean package -DskipTests
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-jar
+          path: target/basic-web-server-1.0-SNAPSHOT.jar
+
+  # Job 3: Actual Deployment to Target Server
+  deploy:
+    needs: build-artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-jar
+          
+      - name: Copy Artifact to VM via SCP
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || '22' }}
+          source: "basic-web-server-1.0-SNAPSHOT.jar"
+          target: "/opt/basic-web-server/"
+
+      - name: Restart Service via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || '22' }}
+          script: |
+            echo "Deployment starting on remote VM..."
+            cd /opt/basic-web-server
+            
+            # If you are using a systemd service (recommended professional approach):
+            # sudo systemctl restart basic-web-server
+            
+            # Or if you are using a raw shell script to restart:
+            echo "Stopping old server instance..."
+            pkill -f 'basic-web-server-1.0-SNAPSHOT.jar' || true
+            
+            echo "Starting new server instance in background..."
+            nohup java -jar basic-web-server-1.0-SNAPSHOT.jar > server.log 2>&1 &
+            
+            echo "Deployment completed successfully!"
