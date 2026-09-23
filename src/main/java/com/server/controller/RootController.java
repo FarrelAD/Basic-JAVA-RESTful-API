@@ -1,69 +1,48 @@
 package com.server.controller;
 
+import com.google.gson.Gson;
 import com.server.model.Users;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 
+/** Controller for handling requests to the root endpoint. */
 public class RootController {
   private Users data;
+  private Gson gson = new Gson();
 
+  /**
+   * Constructs the root controller.
+   *
+   * @param data The user data model.
+   */
   public RootController(Users data) {
     this.data = data;
   }
 
+  /**
+   * Handles GET requests to the root endpoint.
+   *
+   * @param clientSocket The client socket.
+   * @throws IOException If an I/O error occurs.
+   */
   public void handleGetRequest(Socket clientSocket) throws IOException {
     try (PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
 
+      Map<String, Object> responseBody = new HashMap<>();
+      responseBody.put("status", "UP");
+      responseBody.put("message", "Welcome to Basic Web Server API");
+      responseBody.put("totalUsers", data.getArrayLength());
+
       // HTTP response header
       out.println("HTTP/1.1 200 OK");
-      out.println("Content-Type: text/html");
+      out.println("Content-Type: application/json");
       out.println();
 
       // HTTP response body
-      out.println(
-          """
-                <html>
-
-                <head>
-                    <title>Root Page</title>
-                </head>
-
-                <body>
-                    <h1>Welcome! You successfully get response from server</h1>
-                    <p>Current user: """
-              + data.getArrayLength()
-              + """
-                    </p>
-
-                    <br>
-
-                    <div>
-                        <h1>Send user data to server!</h1>
-                        <form action="/users" method="post">
-                            <input type="text" name="name" id="name-input" placeholder="Input name">
-                            <br>
-                            <input type="text" name="job" id="job-input" placeholder="Input job">
-                            <br>
-                            <button type="submit">Submit</button>
-                        </form>
-                    </div>
-
-                    <div>
-                        <h1>Search user data!</h1>
-                        <form action="/search" method="get">
-                            <input type="text" name="name" id="search-box-name" placeholder="Name">
-                            <br>
-                            <input type="text" name="job" id="search-box-job" placeholder="Job">
-                            <br>
-                            <button type="submit">Search</button>
-                        </form>
-                        <p><i>*) Empty search box will get all user data</i></p>
-                    </div>
-                </body>
-
-                </html>
-                """);
+      out.println(gson.toJson(responseBody));
     }
   }
 }

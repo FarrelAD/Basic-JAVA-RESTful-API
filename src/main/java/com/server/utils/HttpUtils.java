@@ -18,9 +18,9 @@ public class HttpUtils {
   public static void handle404ErrorResponse(Socket clientSocket) throws IOException {
     try (PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
       out.println("HTTP/1.1 404 Not Found");
-      out.println("Content-Type: text/html");
+      out.println("Content-Type: application/json");
       out.println();
-      out.println("<h1>404 Not Found!</h1>");
+      out.println("{\"error\": \"404 Not Found\"}");
     }
   }
 
@@ -33,9 +33,13 @@ public class HttpUtils {
   public static void handleServerErrorResponse(Socket clientSocket, Exception e) {
     try (PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
       out.println("HTTP/1.1 500 Internal Server Error");
-      out.println("Content-Type: text/html");
+      out.println("Content-Type: application/json");
       out.println();
-      out.println("Error occured: " + e.getMessage());
+
+      // We escape double quotes just in case, though for a simple server it is basic
+      String safeMsg =
+          e.getMessage() != null ? e.getMessage().replace("\"", "\\\"") : "Unknown Error";
+      out.println("{\"error\": \"500 Internal Server Error\", \"details\": \"" + safeMsg + "\"}");
     } catch (IOException ex) {
       ex.printStackTrace();
     }

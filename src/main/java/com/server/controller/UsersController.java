@@ -1,5 +1,7 @@
 package com.server.controller;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.server.model.User;
 import com.server.model.Users;
 import com.server.utils.HttpUtils;
@@ -13,8 +15,10 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Map;
 
+/** Controller for user endpoints, refactored to REST API (JSON). */
 public class UsersController {
   private Users data;
+  private Gson gson = new Gson();
 
   public UsersController(Users data) {
     this.data = data;
@@ -22,182 +26,25 @@ public class UsersController {
 
   public void getAllUsers(Socket clientSocket) throws IOException {
     try (PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
-
       ArrayList<User> dataResult = data.getAllData();
-      String result = "<ol>";
-      for (User datum : dataResult) {
-        result +=
-            """
-                    <li>
-                        <p>Name : """
-                + datum.getName()
-                + """
-                        </p>
-                        <p>Job : """
-                + datum.getJob()
-                + """
-                        </p>
-                    </li>
-                """;
-      }
-      result += "</ol>";
 
-      // HTTP response header
       out.println("HTTP/1.1 200 OK");
-      out.println("Content-Type: text/html");
+      out.println("Content-Type: application/json");
       out.println();
-
-      // HTTP response body
-      out.println(
-          """
-                <html>
-                    <head>
-                        <title>Welcome!</title>
-                    </head>
-                    <body>
-                        <h1>This is all users data</h1>
-                        """
-              + result
-              + """
-                    </body>
-                </html>
-                """);
+      out.println(gson.toJson(dataResult));
     }
   }
 
   public void getUserDataById(Socket clientSocket, String requestLine) throws IOException {
     try (PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
-
       int userId = UserUtils.getUserId(requestLine);
 
-      String result = null;
       if (userId != -1 && userId <= data.getArrayLength()) {
-        result =
-            """
-                    <h1>You get data from the server</h1>
-                    <p>ID: """
-                + userId
-                + """
-                    </p>
-                    <p>Data:
-                        <ul>
-                            <li>Name: """
-                + data.getUserDataByIndex(userId - 1).getName()
-                + """
-                            </li>
-                            <li>Job: """
-                + data.getUserDataByIndex(userId - 1).getJob()
-                + """
-                            </li>
-                        </ul>
-                    </p>
-
-                    <br><br>
-                    <div>
-                        <div>
-                            <h1>Update this user data!</h1>
-                            <form id="form-update">
-                                <input type="text" name="new-name" id="new-name-input" placeholder="New name">
-                                <br>
-                                <input type="text" name="new-job" id="new-job-input" placeholder="New job">
-                                <br>
-                                <button type="submit">Submit</button>
-                            </form>
-                        </div>
-
-                        <br><br>
-
-                        <div>
-                            <h1>Delete this user data!</h1>
-                            <form id="form-delete">
-                                <button type="submit">Submit</button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <script>
-                        const newNameInput = document.getElementById('new-name-input');
-                        const newJobInput = document.getElementById('new-job-input');
-                        const formUpdate = document.getElementById('form-update');
-                        const formDelete = document.getElementById('form-delete');
-
-
-                        formUpdate.addEventListener('submit', function(event) {
-                            event.preventDefault();
-
-                            const params = new URLSearchParams();
-                            params.append('new-name', newNameInput.value);
-                            params.append('new-job', newJobInput.value);
-
-                            fetch('http://localhost:8000/users/"""
-                + userId
-                + """
-                            ', {
-                                method: 'PATCH',
-                                headers: {
-                                    'Content-Type': 'application/x-www-form-urlencoded'
-                                },
-                                body: params.toString()
-                            })
-                            .then(response => {
-                                if (!response.ok) {
-                                    throw new Error('Network response was not ok: ' + response.statusText);
-                                }
-                                return response.json();
-                            })
-                            .then(data => {
-                                alert('Data has been successfully updated.');
-                                location.reload();
-                            })
-                            .catch(error => console.error('Error:', error));
-                        });
-
-
-                        formDelete.addEventListener('submit', function(event) {
-                            event.preventDefault();
-
-                            fetch('http://localhost:8000/users/"""
-                + userId
-                + """
-                            ', {
-                                method: 'DELETE'
-                            })
-                            .then(response => {
-                                if (!response.ok) {
-                                    throw new Error('Network response was not ok: ' + response.statusText);
-                                }
-                                return response.json();
-                            })
-                            .then(data => {
-                                alert('Data has been successfully deleted!');
-                                location.reload();
-                            })
-                            .catch(error => console.error('Error:', error));
-                        });
-                    </script>
-                """;
-      }
-
-      if (result != null) {
-        // HTTP response header
+        User user = data.getUserDataByIndex(userId - 1);
         out.println("HTTP/1.1 200 OK");
-        out.println("Content-Type: text/html");
+        out.println("Content-Type: application/json");
         out.println();
-
-        // HTTP response body
-        out.println(
-            """
-                    <html>
-                        <head>
-                            <title>User Data</title>
-                        </head>
-                        <body>
-                        """
-                + result
-                + """
-                        </body>
-                    </html>
-                    """);
+        out.println(gson.toJson(user));
       } else {
         HttpUtils.handle404ErrorResponse(clientSocket);
       }
@@ -214,122 +61,83 @@ public class UsersController {
       Map<String, String> queryParams = HttpUtils.extractQueryParams(uri.getQuery());
       ArrayList<User> dataResult = data.getUserDataByQuery(queryParams);
 
-      String dataHTMLContent;
-      if (!dataResult.isEmpty()) {
-        dataHTMLContent = "<ul>";
-        for (User datum : dataResult) {
-          dataHTMLContent +=
-              """
-                        <li>
-                            <p>Name: """
-                  + datum.getName()
-                  + """
-                            </p>
-                            <p>Job: """
-                  + datum.getJob()
-                  + """
-                            </p>
-                        </li>
-                    """;
-        }
-        dataHTMLContent += "</ul>";
-      } else {
-        dataHTMLContent = "<h2>Data not found!</h2>";
-      }
-
-      // HTTP response header
       out.println("HTTP/1.1 200 OK");
-      out.println("Content-Type: text/html");
+      out.println("Content-Type: application/json");
       out.println();
-
-      // HTTP response body
-      out.println(
-          """
-                <h1>Search result!</h1>
-                """ + dataHTMLContent);
+      out.println(gson.toJson(dataResult));
     }
   }
 
   public void postUserData(Socket clientSocket, BufferedReader in) throws IOException {
     try (PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
-
       String requestBody = HttpUtils.getRequestBody(in);
-      String newName = HttpUtils.extractQueryParams(requestBody).get("name");
-      String newJob = HttpUtils.extractQueryParams(requestBody).get("job");
 
-      data.addNewData(new User(newName, newJob));
+      User newUser = gson.fromJson(requestBody, User.class);
+      data.addNewData(newUser);
 
-      // HTTP response header
-      out.println("HTTP/1.1 200 OK");
-      out.println("Content-Type: text/html");
+      JsonObject response = new JsonObject();
+      response.addProperty("status", "success");
+      response.addProperty("message", "User added successfully");
+
+      out.println("HTTP/1.1 201 Created");
+      out.println("Content-Type: application/json");
       out.println();
-
-      // HTTP response body
-      out.println(
-          """
-                <h1>Data successfully submitted to server</h1>
-                <a href="/">
-                    <button type="submit" >Submit data again</button>
-                </a>
-                """);
+      out.println(gson.toJson(response));
     }
   }
 
   public void updateUserDataById(Socket clientSocket, BufferedReader in, String requestLine)
       throws IOException {
     try (PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
-
       String requestBody = HttpUtils.getRequestBody(in);
       int userId = UserUtils.getUserId(requestLine);
 
-      String newName = HttpUtils.extractQueryParams(requestBody).get("new-name");
-      String newJob = HttpUtils.extractQueryParams(requestBody).get("new-job");
-
-      if (!newName.equals("") && newName != null) {
-        data.getUserDataByIndex(userId - 1).setName(newName);
+      if (userId == -1 || userId > data.getArrayLength()) {
+        HttpUtils.handle404ErrorResponse(clientSocket);
+        return;
       }
 
-      if (!newJob.equals("") && newJob != null) {
-        data.getUserDataByIndex(userId - 1).setJob(newJob);
+      User updates = gson.fromJson(requestBody, User.class);
+      User existingUser = data.getUserDataByIndex(userId - 1);
+
+      if (updates.getName() != null && !updates.getName().trim().isEmpty()) {
+        existingUser.setName(updates.getName());
+      }
+      if (updates.getJob() != null && !updates.getJob().trim().isEmpty()) {
+        existingUser.setJob(updates.getJob());
       }
 
-      // HTTP response header
+      JsonObject response = new JsonObject();
+      response.addProperty("status", "success");
+      response.addProperty("message", "Data updated successfully");
+
       out.println("HTTP/1.1 200 OK");
       out.println("Content-Type: application/json");
       out.println();
-
-      // HTTP response body
-      out.println(
-          """
-                {
-                    "status": "success",
-                    "message": "Data updated successfully"
-                }
-                """);
+      out.println(gson.toJson(response));
     }
   }
 
   public void deleteUserDataById(Socket clientSocket, String requestLine) throws IOException {
-    System.out.println("delete bang!");
+    System.out.println("delete request received!");
     try (PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
-
       int userId = UserUtils.getUserId(requestLine);
+
+      if (userId == -1 || userId > data.getArrayLength()) {
+        HttpUtils.handle404ErrorResponse(clientSocket);
+        return;
+      }
 
       data.removeData(userId - 1);
 
-      // HTTP response header
+      JsonObject response = new JsonObject();
+      response.addProperty("status", "success");
+      response.addProperty("message", "Data deleted successfully");
+
       out.println("HTTP/1.1 200 OK");
       out.println("Content-Type: application/json");
       out.println();
-
-      // HTTP response body
-      out.println(
-          """
-                {
-                    "status": "success",
-                    "message": "Data deleted successfully"
-                }
-                """);
+      out.println(gson.toJson(response));
     }
   }
 }
