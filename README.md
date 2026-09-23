@@ -56,6 +56,14 @@ Format the codebase and check for linting errors:
 mvn spotless:apply checkstyle:check
 ```
 
+### Pre-commit Hooks
+This project strictly enforces code quality using Git pre-commit hooks (Spotless and Checkstyle).
+After cloning the repository, you **must** configure Git to use the local hooks directory:
+```bash
+git config core.hooksPath .githooks
+```
+Every time you commit, it will automatically verify formatting and linting. If it fails, the commit will be aborted.
+
 ## Endpoints
 Here are the key REST endpoints that you can interact with (use Postman or `curl`):
 
