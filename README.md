@@ -65,17 +65,91 @@ git config core.hooksPath .githooks
 Every time you commit, it will automatically verify formatting and linting. If it fails, the commit will be aborted.
 
 ## Endpoints
-Here are the key REST endpoints that you can interact with (use Postman or `curl`):
+Here are the key REST endpoints you can interact with. All endpoints strictly consume and return `application/json`.
 
-```
-GET / : Returns a JSON health check and API status
-GET /users : Fetch all users as a JSON array
-GET /users/:id : Fetch a specific user by their ID
-POST /users : Add a new user (Accepts JSON body: {"name": "...", "job": "..."})
-PATCH /users/:id : Update user information (Accepts JSON body: {"name": "..."})
-DELETE /users/:id : Delete a user by their ID
-GET /search?name=&job= : Filters users and returns a JSON array
-```
+### 1. API Health Check
+- **`GET /`**
+  - **Response (200 OK):**
+    ```json
+    {
+      "status": "UP",
+      "message": "Welcome to Basic Web Server API",
+      "totalUsers": 8
+    }
+    ```
+
+### 2. Fetch All Users
+- **`GET /users`**
+  - **Response (200 OK):**
+    ```json
+    [
+      { "name": "Alex", "job": "Data Analyst" },
+      { "name": "Budi", "job": "Frontend Web Developer" }
+    ]
+    ```
+
+### 3. Fetch User by ID
+- **`GET /users/:id`** *(e.g. `/users/1`)*
+  - **Response (200 OK):**
+    ```json
+    {
+      "name": "Alex",
+      "job": "Data Analyst"
+    }
+    ```
+
+### 4. Create New User
+- **`POST /users`**
+  - **Request Body:**
+    ```json
+    {
+      "name": "John Doe",
+      "job": "Backend Engineer"
+    }
+    ```
+  - **Response (201 Created):**
+    ```json
+    {
+      "status": "success",
+      "message": "User added successfully"
+    }
+    ```
+
+### 5. Update User Information
+- **`PATCH /users/:id`** *(e.g. `/users/1`)*
+  - **Request Body:**
+    ```json
+    {
+      "job": "Senior Data Analyst"
+    }
+    ```
+  - **Response (200 OK):**
+    ```json
+    {
+      "status": "success",
+      "message": "Data updated successfully"
+    }
+    ```
+
+### 6. Delete a User
+- **`DELETE /users/:id`** *(e.g. `/users/1`)*
+  - **Response (200 OK):**
+    ```json
+    {
+      "status": "success",
+      "message": "Data deleted successfully"
+    }
+    ```
+
+### 7. Search Users
+- **`GET /search?name=&job=`** *(e.g. `/search?job=Data Analyst`)*
+  - **Response (200 OK):**
+    ```json
+    [
+      { "name": "Alex", "job": "Data Analyst" },
+      { "name": "Dono", "job": "Data Analyst" }
+    ]
+    ```
 
 ## Code Structure
 The project uses the standard Maven structure:
